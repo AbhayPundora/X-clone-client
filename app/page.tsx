@@ -1,8 +1,14 @@
 "use client";
 
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import { BsTwitter, BsBell, BsEnvelope, BsBookmark } from "react-icons/bs";
-import { BiHomeCircle, BiHash, BiUser, BiMoney } from "react-icons/bi";
+import {
+  BiHomeCircle,
+  BiHash,
+  BiUser,
+  BiMoney,
+  BiImageAlt,
+} from "react-icons/bi";
 import { SlOptions } from "react-icons/sl";
 import { Inter } from "next/font/google";
 import toast, { Toaster } from "react-hot-toast";
@@ -14,6 +20,8 @@ import { verifyUserGoogleTokenQuery } from "@/graphql/query/user";
 import { useCurrentUser } from "@/hooks/user";
 import { useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
+import { useCreateTweet, useGetAllTweets } from "@/hooks/tweet";
+import { Tweet } from "@/gql/graphql";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -35,9 +43,27 @@ const sidebarMenuItems: TwitterSidebarButton[] = [
 
 export default function Home() {
   const { user } = useCurrentUser();
-  console.log(user);
+  // console.log(user);
+  const { tweets = [] } = useGetAllTweets();
+  const { mutate } = useCreateTweet();
 
   const queryClient = useQueryClient();
+
+  const [content, setContent] = useState("");
+
+  const handleSelectImage = useCallback(() => {
+    const input = document.createElement("input");
+    input.setAttribute("type", "file");
+    input.setAttribute("accept", "image/*");
+    input.click();
+  }, []);
+
+  const handleCreateTweet = useCallback(() => {
+    mutate({
+      content,
+    });
+    // setContent("");
+  }, [content, mutate]);
 
   /* Data Flow --
       first we login
@@ -82,7 +108,7 @@ export default function Home() {
               {sidebarMenuItems.map((item) => (
                 <li
                   key={item.title}
-                  className="flex justify-start items-center gap-4 hover:bg-gray-800 rounded-full px-5 py-2 mt-2 w-fit cursor-pointer"
+                  className="flex justify-start items-center gap-4  border-gray-600 p-5 hover:bg-[#1D9BF0]/10 transition-colors duration-200 ease-out  rounded-full px-5 py-2 mt-2 w-fit cursor-pointer"
                 >
                   <span className="text-2xl">{item.icon}</span>
                   <span>{item.title}</span>
@@ -103,8 +129,8 @@ export default function Home() {
                   className="rounded-full"
                   src={user?.profileImageURL}
                   alt="Profile image"
-                  height={50}
-                  width={50}
+                  height={40}
+                  width={40}
                 />
               )}
               <div>
@@ -116,14 +142,48 @@ export default function Home() {
         </aside>
 
         {/* Feed */}
-        <main className="col-span-5 border-r border-l h-screen overflow-x-hidden overflow-y-scroll border-gray-600">
-          <FeedCard />
-          <FeedCard />
-          <FeedCard />
-          <FeedCard />
-          <FeedCard />
-          <FeedCard />
-          <FeedCard />
+        <main className="scrollbar-hide col-span-5 border-r border-l h-screen overflow-x-hidden overflow-y-scroll border-gray-600 scrollbar-hide">
+          <div>
+            <div className="border border-r-0 border-l-0 border-b-0 border-gray-600 p-5  hover:bg-[#1D9BF0]/10 transition-colors duration-200 ease-out  cursor-pointer">
+              <div className="grid grid-cols-12 gap-3">
+                <div className="col-span-1">
+                  {user?.profileImageURL && (
+                    <Image
+                      className="rounded-full"
+                      src={user?.profileImageURL}
+                      alt="user image"
+                      height={50}
+                      width={50}
+                    />
+                  )}
+                </div>
+                <div className="col-span-11">
+                  <textarea
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    className="w-full bg-transparent  px-3 border-b border-slate-700 resize-none outline-none focus:outline-none focus:ring-0"
+                    placeholder="What's happening?"
+                    rows={3}
+                  ></textarea>
+                  <div className="mt-2 flex justify-between items-center">
+                    <BiImageAlt
+                      onClick={handleSelectImage}
+                      className="text-xl"
+                    />
+                    <button
+                      onClick={handleCreateTweet}
+                      className="bg-[#1d9bf0] text-sm font-semibold py-2 px-4 rounded-full  cursor-pointer"
+                    >
+                      Tweet
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {tweets?.map((tweet) =>
+            tweet ? <FeedCard key={tweet?.id} data={tweet as Tweet} /> : null,
+          )}
         </main>
 
         {/* Right Panel */}
